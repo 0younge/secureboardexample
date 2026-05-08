@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.example.secureboardexample.domain.adminlog.repository.AdminLogRepository;
 import com.example.secureboardexample.domain.comment.dto.CommentResponse;
 import com.example.secureboardexample.domain.comment.dto.CreateCommentRequest;
 import com.example.secureboardexample.domain.comment.repository.CommentRepository;
@@ -35,6 +36,9 @@ class CommentAdminControllerTest {
 
     @Autowired
     private CommentRepository commentRepository;
+
+    @Autowired
+    private AdminLogRepository adminLogRepository;
 
     @Autowired
     private PostService postService;
@@ -70,6 +74,11 @@ class CommentAdminControllerTest {
                 .andExpect(status().isOk());
 
         assertThat(commentRepository.findById(comment.id())).isEmpty();
+        assertThat(adminLogRepository.findAll()).anySatisfy(adminLog -> {
+            assertThat(adminLog.getAdminUser().getId()).isEqualTo(admin.getId());
+            assertThat(adminLog.getRequestUrl()).isEqualTo("/api/admin/comments/" + comment.id());
+            assertThat(adminLog.getHttpMethod()).isEqualTo("DELETE");
+        });
     }
 
     private CommentResponse saveComment(User user) {
