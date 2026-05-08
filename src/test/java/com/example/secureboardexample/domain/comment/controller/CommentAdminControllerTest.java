@@ -2,6 +2,7 @@ package com.example.secureboardexample.domain.comment.controller;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.example.secureboardexample.domain.adminlog.repository.AdminLogRepository;
@@ -57,7 +58,8 @@ class CommentAdminControllerTest {
 
         mockMvc.perform(delete("/api/admin/comments/{commentId}", comment.id())
                         .header("Authorization", "Bearer " + token))
-                .andExpect(status().isForbidden());
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("FORBIDDEN"));
 
         assertThat(commentRepository.findById(comment.id())).isPresent();
     }

@@ -43,8 +43,9 @@ class UserAdminControllerTest {
                                 {
                                   "role": "ADMIN"
                                 }
-                                """))
-                .andExpect(status().isForbidden());
+                """))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("FORBIDDEN"));
     }
 
     @Test
