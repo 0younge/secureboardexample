@@ -3,8 +3,10 @@ package com.example.secureboardexample.domain.user.controller;
 import com.example.secureboardexample.domain.user.dto.UserResponse;
 import com.example.secureboardexample.domain.user.service.UserService;
 import com.example.secureboardexample.global.common.ApiResponse;
+import com.example.secureboardexample.global.security.CustomUserDetails;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -20,6 +22,11 @@ public class UserController {
     @GetMapping
     public ApiResponse<List<UserResponse>> getUsers() {
         return ApiResponse.of(200, "사용자 목록 조회 성공", userService.getUsers());
+    }
+
+    @GetMapping("/me")
+    public ApiResponse<UserResponse> getMyProfile(@AuthenticationPrincipal CustomUserDetails userDetails) {
+        return ApiResponse.of(200, "내 정보 조회 성공", UserResponse.from(userDetails.getUser()));
     }
 
     @GetMapping("/{userId}")
