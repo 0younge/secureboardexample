@@ -35,13 +35,26 @@ class CommentServiceTest {
     @Test
     void createAndUpdateComment() {
         User user = saveUser("comment-user@test.com");
-        PostResponse post = postService.createPost(new CreatePostRequest(user.getId(), "게시글", "내용"));
+        PostResponse post = postService.createPost(user.getId(), new CreatePostRequest("게시글", "내용"));
 
-        CommentResponse created = commentService.createComment(post.id(), new CreateCommentRequest(user.getId(), "댓글"));
-        CommentResponse updated = commentService.updateComment(created.id(), new UpdateCommentRequest("수정 댓글"));
+        CommentResponse created = commentService.createComment(user.getId(), post.id(), new CreateCommentRequest("댓글"));
+        CommentResponse updated = commentService.updateComment(user.getId(), created.id(), new UpdateCommentRequest("수정 댓글"));
 
         assertThat(created.postId()).isEqualTo(post.id());
         assertThat(updated.content()).isEqualTo("수정 댓글");
+    }
+
+    @Test
+    void onlyAuthorCanUpdateComment() {
+        User author = saveUser("comment-author@test.com");
+        User other = saveUser("comment-other@test.com");
+        PostResponse post = postService.createPost(author.getId(), new CreatePostRequest("게시글", "내용"));
+        CommentResponse comment = commentService.createComment(author.getId(), post.id(), new CreateCommentRequest("댓글"));
+
+        assertThatThrownBy(() -> commentService.updateComment(other.getId(), comment.id(), new UpdateCommentRequest("수정")))
+                .isInstanceOf(CustomException.class)
+                .extracting("errorCode")
+                .isEqualTo(ErrorCode.FORBIDDEN);
     }
 
     @Test
@@ -54,13 +67,18 @@ class CommentServiceTest {
 
     @Test
     void updateUnknownCommentThrowsException() {
-        assertThatThrownBy(() -> commentService.updateComment(0L, new UpdateCommentRequest("수정")))
+        assertThatThrownBy(() -> commentService.updateComment(1L, 0L, new UpdateCommentRequest("수정")))
                 .isInstanceOf(CustomException.class)
                 .extracting("errorCode")
                 .isEqualTo(ErrorCode.COMMENT_NOT_FOUND);
     }
 
     private User saveUser(String email) {
-        return userRepository.save(new User(email, "password", "댓글작성자", UserRole.USER));
+        return userRepository.save(User.builder()
+                .email(email)
+                .password("password")
+                .nickname("댓글작성자")
+                .role(UserRole.USER)
+                .build());
     }
 }

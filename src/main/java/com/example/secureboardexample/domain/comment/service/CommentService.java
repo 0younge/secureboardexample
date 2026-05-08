@@ -8,6 +8,7 @@ import com.example.secureboardexample.domain.comment.repository.CommentRepositor
 import com.example.secureboardexample.domain.post.entity.Post;
 import com.example.secureboardexample.domain.post.service.PostService;
 import com.example.secureboardexample.domain.user.entity.User;
+import com.example.secureboardexample.domain.user.entity.UserRole;
 import com.example.secureboardexample.domain.user.service.UserService;
 import com.example.secureboardexample.global.exception.CustomException;
 import com.example.secureboardexample.global.exception.ErrorCode;
@@ -26,9 +27,9 @@ public class CommentService {
     private final UserService userService;
 
     @Transactional
-    public CommentResponse createComment(Long postId, CreateCommentRequest request) {
+    public CommentResponse createComment(Long userId, Long postId, CreateCommentRequest request) {
         Post post = postService.getPostEntity(postId);
-        User user = userService.getUserEntity(request.userId());
+        User user = userService.getUserEntity(userId);
         Comment comment = new Comment(post, user, request.content());
 
         return CommentResponse.from(commentRepository.save(comment));
@@ -49,16 +50,38 @@ public class CommentService {
     }
 
     @Transactional
-    public CommentResponse updateComment(Long commentId, UpdateCommentRequest request) {
+    public CommentResponse updateComment(Long userId, Long commentId, UpdateCommentRequest request) {
         Comment comment = getCommentEntity(commentId);
+        validateAuthor(comment, userId);
         comment.update(request.content());
 
         return CommentResponse.from(comment);
     }
 
     @Transactional
-    public void deleteComment(Long commentId) {
+    public void deleteComment(Long userId, UserRole role, Long commentId) {
+        Comment comment = getCommentEntity(commentId);
+        validateAuthorOrAdmin(comment, userId, role);
+        commentRepository.delete(comment);
+    }
+
+    @Transactional
+    public void deleteCommentByAdmin(Long commentId) {
         Comment comment = getCommentEntity(commentId);
         commentRepository.delete(comment);
+    }
+
+    private void validateAuthor(Comment comment, Long userId) {
+        if (!comment.getUser().getId().equals(userId)) {
+            throw new CustomException(ErrorCode.FORBIDDEN);
+        }
+    }
+
+    private void validateAuthorOrAdmin(Comment comment, Long userId, UserRole role) {
+        if (role == UserRole.ADMIN) {
+            return;
+        }
+
+        validateAuthor(comment, userId);
     }
 }

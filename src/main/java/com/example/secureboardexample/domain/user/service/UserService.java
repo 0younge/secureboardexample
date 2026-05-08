@@ -1,7 +1,9 @@
 package com.example.secureboardexample.domain.user.service;
 
 import com.example.secureboardexample.domain.user.dto.UserResponse;
+import com.example.secureboardexample.domain.user.dto.ChangeUserRoleResponse;
 import com.example.secureboardexample.domain.user.entity.User;
+import com.example.secureboardexample.domain.user.entity.UserRole;
 import com.example.secureboardexample.domain.user.repository.UserRepository;
 import com.example.secureboardexample.global.exception.CustomException;
 import com.example.secureboardexample.global.exception.ErrorCode;
@@ -31,5 +33,13 @@ public class UserService {
                 .stream()
                 .map(UserResponse::from)
                 .toList();
+    }
+
+    @Transactional
+    public ChangeUserRoleResponse changeUserRole(Long userId, UserRole role) {
+        User user = getUserEntity(userId);
+        user.changeRole(role);
+
+        return ChangeUserRoleResponse.from(user);
     }
 }

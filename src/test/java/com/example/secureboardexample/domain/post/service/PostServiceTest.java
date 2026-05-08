@@ -43,8 +43,8 @@ class PostServiceTest {
     void createAndUpdatePost() {
         User user = saveUser("post-user@test.com");
 
-        PostResponse created = postService.createPost(new CreatePostRequest(user.getId(), "첫 게시글", "내용입니다"));
-        PostResponse updated = postService.updatePost(created.id(), new UpdatePostRequest("수정 제목", "수정 내용"));
+        PostResponse created = postService.createPost(user.getId(), new CreatePostRequest("첫 게시글", "내용입니다"));
+        PostResponse updated = postService.updatePost(user.getId(), created.id(), new UpdatePostRequest("수정 제목", "수정 내용"));
 
         assertThat(created.userId()).isEqualTo(user.getId());
         assertThat(updated.title()).isEqualTo("수정 제목");
@@ -52,12 +52,24 @@ class PostServiceTest {
     }
 
     @Test
+    void onlyAuthorCanUpdatePost() {
+        User author = saveUser("post-author@test.com");
+        User other = saveUser("post-other@test.com");
+        PostResponse post = postService.createPost(author.getId(), new CreatePostRequest("작성자 글", "내용"));
+
+        assertThatThrownBy(() -> postService.updatePost(other.getId(), post.id(), new UpdatePostRequest("수정", "수정")))
+                .isInstanceOf(CustomException.class)
+                .extracting("errorCode")
+                .isEqualTo(ErrorCode.FORBIDDEN);
+    }
+
+    @Test
     void deletePostAlsoDeletesComments() {
         User user = saveUser("post-delete-user@test.com");
-        PostResponse post = postService.createPost(new CreatePostRequest(user.getId(), "삭제할 글", "내용"));
-        commentService.createComment(post.id(), new CreateCommentRequest(user.getId(), "댓글"));
+        PostResponse post = postService.createPost(user.getId(), new CreatePostRequest("삭제할 글", "내용"));
+        commentService.createComment(user.getId(), post.id(), new CreateCommentRequest("댓글"));
 
-        postService.deletePost(post.id());
+        postService.deletePost(user.getId(), user.getRole(), post.id());
 
         assertThat(postRepository.findById(post.id())).isEmpty();
         assertThat(commentRepository.findAllByPostId(post.id())).isEmpty();
@@ -72,6 +84,11 @@ class PostServiceTest {
     }
 
     private User saveUser(String email) {
-        return userRepository.save(new User(email, "password", "작성자", UserRole.USER));
+        return userRepository.save(User.builder()
+                .email(email)
+                .password("password")
+                .nickname("작성자")
+                .role(UserRole.USER)
+                .build());
     }
 }
